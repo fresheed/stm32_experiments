@@ -33,12 +33,12 @@ void SysTick_Handler(void)
 				buttonLogicalState=1;
 				GPIOC->ODR ^= (1 << 9);					// Toggles PC9
 				GPIOC->ODR ^= (1 << 8);					// Toggles PC8
-				if (pwmToggle==0){
-					TIM1->CCR1=2500;					// compare value
-				} else {
-					TIM1->CCR1=5;					// compare value
-				}
-				pwmToggle ^= 1;
+//				if (pwmToggle==0){
+//					TIM1->CCR1=2500;					// compare value
+//				} else {
+//					TIM1->CCR1=5;					// compare value
+//				}
+//				pwmToggle ^= 1;
 			}
 		} else {
 			buttonLogicalState=0;
@@ -61,22 +61,23 @@ void setupPwm(){
 	RCC->AHBENR |= (1 << 17);		// Enable clock for Port A: TIM1_CH1 maps to PA8
 	GPIOA->MODER |= (2 << 16); 		// PA8: alternating function
 	GPIOA->AFR[1] |= (2);		// AF2: TIM1_CH1 for PA8; shift register since we need to access higher one
-	GPIOA->OTYPER &= ~(1 << 8);		// push-pull; don't know what is it, but it mentioned too http://stm32.chrns.com/post/150532351494/ledpwm
+	GPIOA->OTYPER &= ~(1 << 8);		// output type is push-pull (not open-drain)
 	GPIOA->OSPEEDR |= (3 << 16); 	// high speed; originally 50mhz is used
-	//int a=RCC_APB2ENR_TIM1EN | RCC_APB2ENR_IOPAEN | RCC_APB2ENR_AFIOEN;
 
 	RCC->APB2ENR |= (1 << 11);		// enable TIM1
-	TIM1->PSC=72; 					// prescaler - should discover more about it
-	TIM1->ARR=5000;					// auto-reload value
-	TIM1->CCR1=500;					// compare value
-	TIM1->CCER |= 3;				// enable output to pin, active level is low
-	TIM1->BDTR |= (1 << 15);		// main output enable, whatever it means
+	//TIM1->PSC=72;
+	TIM1->PSC=SystemCoreClock/1000;		// prescaler divides clock source (currently system clock is used)
+	TIM1->ARR=2000;					// defines frequency - value of counter which triggers reload
+	TIM1->CCR1=1000;				// defines pulse width - value of counter which toggles output
+	TIM1->CCER |= 1;				// enable output to pin, active level is high
+	// see https://electronix.ru/forum/lofiversion/index.php/t108897.html - maybe this is a feature for TIM1,TIM8
+	TIM1->BDTR |= (1 << 15);		// main output enable, whatever it means; it is REALLY needed
 	TIM1->CCMR1 &= ~3;				// compare/capture is compare (which means output)
 
-	// maybe also setup OC1PE?
-	TIM1->CCMR1 |= (1 << 3);
+	// not so important, but this way looks safer
+	TIM1->CCMR1 |= (1 << 3);		// OC1PE - enable preload register (i.e. buffer) for CCR1
 
-	TIM1->CCMR1 |= (6 << 4);		// pwm mode 1 (usual)
+	TIM1->CCMR1 |= (6 << 4);		// pwm mode 1; ? mode 2 is inverse ?
 	TIM1->CR1 &= ~(1 << 4);			// count up
 	TIM1->CR1 &= ~(3 << 5);			// count as usually - other options are related to "center-aligned count"
 
