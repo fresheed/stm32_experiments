@@ -33,12 +33,16 @@ void SysTick_Handler(void)
 				buttonLogicalState=1;
 				GPIOC->ODR ^= (1 << 9);					// Toggles PC9
 				GPIOC->ODR ^= (1 << 8);					// Toggles PC8
-//				if (pwmToggle==0){
-//					TIM1->CCR1=2500;					// compare value
-//				} else {
-//					TIM1->CCR1=5;					// compare value
-//				}
-//				pwmToggle ^= 1;
+				if (pwmToggle==0){
+					TIM1->PSC=11;		// prescaler divides clock source (currently system clock is used)
+					TIM1->ARR=9090;					// defines frequency - value of counter which triggers reload
+					TIM1->CCR1=4545;				// defines pulse width - value of counter which toggles output
+				} else {
+					TIM1->PSC=9090;		// prescaler divides clock source (currently system clock is used)
+					TIM1->ARR=11;					// defines frequency - value of counter which triggers reload
+					TIM1->CCR1=6;				// defines pulse width - value of counter which toggles output
+				}
+				pwmToggle ^= 1;
 			}
 		} else {
 			buttonLogicalState=0;
@@ -65,10 +69,13 @@ void setupPwm(){
 	GPIOA->OSPEEDR |= (3 << 16); 	// high speed; originally 50mhz is used
 
 	RCC->APB2ENR |= (1 << 11);		// enable TIM1
-	//TIM1->PSC=72;
-	TIM1->PSC=SystemCoreClock/1000;		// prescaler divides clock source (currently system clock is used)
-	TIM1->ARR=2000;					// defines frequency - value of counter which triggers reload
-	TIM1->CCR1=1000;				// defines pulse width - value of counter which toggles output
+	//TIM1->PSC=SystemCoreClock/100000;		// prescaler divides clock source (currently system clock is used)
+	//TIM1->ARR=2000;					// defines frequency - value of counter which triggers reload
+	//TIM1->CCR1=1000;				// defines pulse width - value of counter which toggles output
+	TIM1->PSC=11;		// prescaler divides clock source (currently system clock is used)
+	TIM1->ARR=9090;					// defines frequency - value of counter which triggers reload
+	TIM1->CCR1=4545;				// defines pulse width - value of counter which toggles output; NO +-1 MAGIC!
+
 	TIM1->CCER |= 1;				// enable output to pin, active level is high
 	// see https://electronix.ru/forum/lofiversion/index.php/t108897.html - maybe this is a feature for TIM1,TIM8
 	TIM1->BDTR |= (1 << 15);		// main output enable, whatever it means; it is REALLY needed
